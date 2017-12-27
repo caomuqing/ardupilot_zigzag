@@ -87,9 +87,6 @@ Copter::Mode *Copter::mode_from_mode_num(const uint8_t mode)
 
         case SMART_RTL:
             ret = &mode_smartrtl;
-
-        case ZIGZAG:
-            ret = &mode_zigzag;
             break;
 
         default:

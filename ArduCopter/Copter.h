@@ -965,7 +965,6 @@ private:
     ModeThrow mode_throw{*this};
     ModeGuidedNoGPS mode_guided_nogps{*this};
     ModeSmartRTL mode_smartrtl{*this};
-    ModeZigzag mode_zigzag{*this};
 
     // mode.cpp
     Mode *mode_from_mode_num(const uint8_t mode);
