@@ -1132,3 +1132,38 @@ protected:
 private:
 
 };
+
+
+class ModeZigzag : public Mode {        //a new mode for zigzag
+
+public:
+
+    ModeZigzag(Copter &copter) :
+        Copter::Mode(copter)
+        { }
+
+    bool init(bool ignore_checks) override;
+    void run() override;
+
+    bool requires_GPS() const override { return true; }
+    bool has_manual_throttle() const override { return false; }
+    bool allows_arming(bool from_gcs) const override { return true; };
+    bool is_autopilot() const override { return false; }
+
+    void zigzag_receive_signal_from_auxsw(uint8_t aux_switch_position);
+
+protected:
+
+    const char *name() const override { return "ZIGZAG"; }
+    const char *name4() const override { return "ZIZG"; }
+
+private:
+    void zigzag_auto_control();
+    void zigzag_manual_control();
+    bool zigzag_has_arr_at_dest();
+    void zigzag_calculate_next_dest(Vector3f& next_dest) const;
+    void zigzag_set_yaw_state(bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_angle);
+    bool zigzag_set_destination(const Vector3f& destination, bool use_yaw = false, float yaw_cd = 0.0, bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false);
+
+
+};

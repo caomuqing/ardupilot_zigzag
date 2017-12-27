@@ -74,6 +74,7 @@ enum aux_sw_func {
     AUXSW_INVERTED  =           43,  // enable inverted flight
     AUXSW_WINCH_ENABLE =        44, // winch enable/disable
     AUXSW_WINCH_CONTROL =       45, // winch control
+    AUXSW_ZIGZAG_ENABLE =       46, // for zigzag mode
     AUXSW_SWITCH_MAX,
 };
 
@@ -107,6 +108,7 @@ enum control_mode_t {
     AVOID_ADSB =   19,  // automatic avoidance of obstacles in the macro scale - e.g. full-sized aircraft
     GUIDED_NOGPS = 20,  // guided mode but only accepts attitude and altitude
     SMART_RTL =    21,  // SMART_RTL returns to home by retracing its steps
+    ZIGZAG =       22,  // ZIGZAG mode is able to fly zigzag within a certain area
 };
 
 enum mode_reason_t {
