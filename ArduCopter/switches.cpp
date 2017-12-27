@@ -657,6 +657,15 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
                     break;
                 }
             break;
+         case AUXSW_ZIGZAG_ENABLE:
+            if (control_mode == ZIGZAG) {
+                hal.console->printf("Send signal to zigzag \n");
+                copter.mode_zigzag.zigzag_receive_signal_from_auxsw(ch_flag);
+                // output the vaálue
+                int radio_in = RC_Channels::rc_channel(CH_7)->get_radio_in();
+                hal.console->printf("Channel 7: %d \n", radio_in);
+            }       
+            break;
     }
 }
 
