@@ -14,7 +14,7 @@ struct {
     Vector3f B_pos;
     // Vector3f cur_dest;    //used to judge if plane has arrived ar current destination
     //record how many times zigzag_set_destination() has been called
-    uint32_t times_set_zigzag_dest;
+    // uint32_t times_set_zigzag_dest;
 } static zigzag_waypoint_state;
 
 struct {
@@ -24,6 +24,7 @@ struct {
 } static zigzag_judge_moving;
 
 static bool in_zigzag_manual_control;  //true if it's in manual control
+static bool zigzag_is_between_A_and_B;
 // static uint32_t count_to_define_AB;    //used to define A and B
 // static uint8_t last_aux_switch_position;
 
@@ -31,7 +32,7 @@ static bool in_zigzag_manual_control;  //true if it's in manual control
 bool Copter::ModeZigzag::init(bool ignore_checks)
 {
     if (_copter.position_ok() || ignore_checks) {
-        hal.console->printf("**ZIGZAG INIT STARTED**\n");
+        hal.console->printf("*ZIGZAG INIT STARTED*\n");
         // initialize's loiter position and velocity on xy-axes from current pos and velocity
         wp_nav->init_loiter_target();
 
@@ -67,8 +68,9 @@ bool Copter::ModeZigzag::init(bool ignore_checks)
         // initialise waypoint state
         zigzag_waypoint_state.A_hasbeen_defined = false;
         zigzag_waypoint_state.B_hasbeen_defined = false;
-        zigzag_waypoint_state.times_set_zigzag_dest = 0;
-        in_zigzag_manual_control = false;
+        // zigzag_waypoint_state.times_set_zigzag_dest = 0;
+        in_zigzag_manual_control = true;
+        zigzag_is_between_A_and_B = false;
         // count_to_define_AB = 0;
         // last_aux_switch_position = 1;
         zigzag_judge_moving.is_keeping_time = false;
@@ -257,18 +259,61 @@ bool Copter::ModeZigzag::zigzag_has_arr_at_dest()
 // zigzag_calculate_next_dest - calculate next destination according to vector A-B and current position 
 // if zigzag_waypoint_state.times_set_zigzag_dest is odd, next destination is on the same side as B
 // else if it's odd, next destination is on the same side as A
-void Copter::ModeZigzag::zigzag_calculate_next_dest(Vector3f& next_dest) const
+void Copter::ModeZigzag::zigzag_calculate_next_dest(Vector3f& next_dest, uint8_t next_A_or_B) const
 {
-    //get current position
-    Vector3f cur_pos = inertial_nav.get_position();
-    // calculate difference between A and B - vector AB
+    // calculate difference between A and B - vector AB and its direction
     Vector3f pos_diff = zigzag_waypoint_state.B_pos - zigzag_waypoint_state.A_pos;
-
-    if (zigzag_waypoint_state.times_set_zigzag_dest % 2 == 1){
-        pos_diff *= -1;   //inverse the direction - vector BA
+    // get current position
+    Vector3f cur_pos = inertial_nav.get_position();
+    if(!zigzag_is_between_A_and_B){
+        // if the drone's position is on the side of A or B
+        if(next_A_or_B == 0)
+            next_dest = cur_pos + pos_diff; 
+        if(next_A_or_B == 2)
+            next_dest = cur_pos + pos_diff*(-1); 
     }
-    Vector3f dest = cur_pos + pos_diff; 
-    next_dest = dest;
+    else{
+        // used to check if the drone is outside A-B scale
+        int next_dir = 1;
+        // if the drone's position is between A and B
+        float xa=zigzag_waypoint_state.A_pos.x;
+        float ya=zigzag_waypoint_state.A_pos.y;
+        float xb=zigzag_waypoint_state.B_pos.x;
+        float yb=zigzag_waypoint_state.B_pos.y;
+        float xc=cur_pos.x;
+        float yc=cur_pos.y;
+        next_dest.z = cur_pos.z;
+        if(next_A_or_B == 0){
+            // calculate next B
+            Vector3f pos_diff_BC = cur_pos - zigzag_waypoint_state.B_pos;
+            if( (pos_diff_BC.x*pos_diff.x+pos_diff_BC.y*pos_diff.y) > 0)
+                next_dir = -1;
+            float dis_from_AB = fabsf(xc*(yb-ya)/(xb-xa)-yc+(xb*ya-xa*yb)/(xb-xa))/sqrtf(1+((yb-ya)*(yb-ya))/((xb-xa)*(xb-xa)));
+            float dis_CB = sqrtf((xc-xb)*(xc-xb)+(yc-yb)*(yc-yb));
+            float dis_BE = sqrtf(dis_CB*dis_CB-dis_from_AB*dis_from_AB);
+            float dis_ratio = dis_BE/sqrtf((xa-xb)*(xa-xb)+(ya-yb)*(ya-yb));
+            next_dest.x = cur_pos.x + next_dir*dis_ratio*pos_diff.x;
+            next_dest.y = cur_pos.y + next_dir*dis_ratio*pos_diff.y;
+        }
+        if(next_A_or_B == 2){
+            // calculate next A
+            Vector3f pos_diff_AC = cur_pos - zigzag_waypoint_state.A_pos;
+            if( (pos_diff_AC.x*pos_diff.x+pos_diff_AC.y*pos_diff.y) < 0)
+                next_dir = -1;
+            float dis_from_AB = fabsf(xc*(yb-ya)/(xb-xa)-yc+(xb*ya-xa*yb)/(xb-xa))/sqrtf(1+((yb-ya)*(yb-ya))/((xb-xa)*(xb-xa)));
+            float dis_CA = sqrtf((xc-xa)*(xc-xa)+(yc-ya)*(yc-ya));
+            float dis_AE = sqrtf(dis_CA*dis_CA-dis_from_AB*dis_from_AB);
+            float dis_ratio = dis_AE/sqrtf((xa-xb)*(xa-xb)+(ya-yb)*(ya-yb));
+            next_dest.x = cur_pos.x + (-1)*next_dir*dis_ratio*pos_diff.x;
+            next_dest.y = cur_pos.y + (-1)*next_dir*dis_ratio*pos_diff.y;
+        }
+    }
+
+    // if (zigzag_waypoint_state.times_set_zigzag_dest % 2 == 1){
+    //     pos_diff *= -1;   //inverse the direction - vector BA
+    // }
+    // Vector3f dest = cur_pos + pos_diff; 
+    // next_dest = dest;
 }
 
 // called by AUXSW_SAVE_WP function in switches.cpp
@@ -278,6 +323,46 @@ void Copter::ModeZigzag::zigzag_receive_signal_from_auxsw(uint8_t aux_switch_pos
     hal.console->printf("zigzag_receive_signal_from_auxsw \n");
     hal.console->printf("Bool A: %s\n", zigzag_waypoint_state.A_hasbeen_defined?"true":"false");
     hal.console->printf("Bool B: %s\n", zigzag_waypoint_state.B_hasbeen_defined?"true":"false");
+
+    // define point A and B
+    if(!zigzag_waypoint_state.A_hasbeen_defined || !zigzag_waypoint_state.B_hasbeen_defined){
+        if((!zigzag_waypoint_state.A_hasbeen_defined && aux_switch_position == AUX_SWITCH_HIGH) || (!zigzag_waypoint_state.B_hasbeen_defined && aux_switch_position == AUX_SWITCH_LOW)){
+            Vector3f cur_pos = inertial_nav.get_position();
+            zigzag_set_destination(cur_pos);
+            return;
+        }
+    }
+    else{
+        // AUX_SWITCH_LOW = 0
+        // AUX_SWITCH_MIDDLE = 1
+        // AUX_SWITCH_HIGH = 2
+        if( (aux_switch_position == AUX_SWITCH_HIGH) || (aux_switch_position == AUX_SWITCH_LOW)){
+            // calculate next point A or B
+            // need to judge if the drone's position is between A and B
+            Vector3f next_dest;
+            zigzag_calculate_next_dest(next_dest,aux_switch_position);
+            // initialise waypoint and spline controller
+            wp_nav->wp_and_spline_init();
+            zigzag_set_destination(next_dest);
+            in_zigzag_manual_control = false;
+            hal.console->printf("Auto control \n");
+        }
+        else{
+            //regain the control
+            if(!in_zigzag_manual_control){
+                hal.console->printf("Regain manual control \n");
+                in_zigzag_manual_control=true;
+                wp_nav->init_loiter_target();
+                zigzag_is_between_A_and_B =true;
+            }
+            else
+                zigzag_is_between_A_and_B=false;
+        }
+    }
+
+
+
+    /*
     // only high and low position are used
     // Before we set point A and B, make it stay at middle position
     if(aux_switch_position == AUX_SWITCH_MIDDLE){
@@ -289,6 +374,8 @@ void Copter::ModeZigzag::zigzag_receive_signal_from_auxsw(uint8_t aux_switch_pos
         hal.console->printf("Current position: X:%f Y:%f\n", cur_pos.x, cur_pos.y);
         zigzag_set_destination(cur_pos);
     }
+    */
+
     // if(count_to_define_AB < 10){ // set point A, B
     //     Vector3f cur_pos = inertial_nav.get_position();
     //     if(!zigzag_waypoint_state.A_hasbeen_defined && (count_to_define_AB>0 || last_aux_switch_position!=aux_switch_position)){
@@ -309,6 +396,8 @@ void Copter::ModeZigzag::zigzag_receive_signal_from_auxsw(uint8_t aux_switch_pos
     //         }
     //     }
     // }
+
+    /*
     else{ // point A and B have been set
         // when aux switch's position changes between high and low, it means the manual control part has been finished
         // if(last_aux_switch_position != aux_switch_position){
@@ -323,6 +412,7 @@ void Copter::ModeZigzag::zigzag_receive_signal_from_auxsw(uint8_t aux_switch_pos
         // } 
     }
     // last_aux_switch_position = aux_switch_position;
+    */
 }
 
 // zigzag_set_destination - sets zigzag mode's target destination
@@ -342,24 +432,27 @@ bool Copter::ModeZigzag::zigzag_set_destination(const Vector3f& destination, boo
 #endif
 
     //records how many times this function has been called successfully
-    zigzag_waypoint_state.times_set_zigzag_dest += 1;
+    // zigzag_waypoint_state.times_set_zigzag_dest += 1;
+
     //define point A
-    if (zigzag_waypoint_state.times_set_zigzag_dest == 1 && !zigzag_waypoint_state.A_hasbeen_defined){
+    if(!zigzag_waypoint_state.A_hasbeen_defined){
+    // if (zigzag_waypoint_state.times_set_zigzag_dest == 1 && !zigzag_waypoint_state.A_hasbeen_defined){
         zigzag_waypoint_state.A_pos = destination;
         hal.console->printf("A has been defined: X:%f Y:%f\n", destination.x, destination.y);
         zigzag_waypoint_state.A_hasbeen_defined = true;
         return true;
     }
     //define point B
-    if (zigzag_waypoint_state.times_set_zigzag_dest == 2 && !zigzag_waypoint_state.B_hasbeen_defined){
+    else if(!zigzag_waypoint_state.B_hasbeen_defined){
+    // if (zigzag_waypoint_state.times_set_zigzag_dest == 2 && !zigzag_waypoint_state.B_hasbeen_defined){
         zigzag_waypoint_state.B_pos = destination;
         hal.console->printf("B has been defined: X:%f Y:%f\n", destination.x, destination.y);
         // zigzag_waypoint_state.cur_dest = zigzag_waypoint_state.A_pos;   //regard A as first destination
         zigzag_waypoint_state.B_hasbeen_defined = true;
-        wp_nav->wp_and_spline_init();
-        // set yaw state
-        zigzag_set_yaw_state(use_yaw, yaw_cd, use_yaw_rate, yaw_rate_cds, relative_yaw);
-        wp_nav->set_wp_destination(zigzag_waypoint_state.A_pos, false);
+        // wp_nav->wp_and_spline_init();
+        // // set yaw state
+        // zigzag_set_yaw_state(use_yaw, yaw_cd, use_yaw_rate, yaw_rate_cds, relative_yaw);
+        // wp_nav->set_wp_destination(zigzag_waypoint_state.A_pos, false);
         return true;
     }
 

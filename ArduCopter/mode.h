@@ -1161,7 +1161,7 @@ private:
     void zigzag_auto_control();
     void zigzag_manual_control();
     bool zigzag_has_arr_at_dest();
-    void zigzag_calculate_next_dest(Vector3f& next_dest) const;
+    void zigzag_calculate_next_dest(Vector3f& next_dest, uint8_t next_A_or_B) const;
     void zigzag_set_yaw_state(bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_angle);
     bool zigzag_set_destination(const Vector3f& destination, bool use_yaw = false, float yaw_cd = 0.0, bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false);
 
