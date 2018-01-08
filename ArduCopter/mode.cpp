@@ -11,89 +11,89 @@ Copter::Mode *Copter::mode_from_mode_num(const uint8_t mode)
     Copter::Mode *ret = nullptr;
 
     switch (mode) {
-        case ACRO:
-            ret = &mode_acro;
-            break;
+    case ACRO:
+        ret = &mode_acro;
+        break;
 
-        case STABILIZE:
-            ret = &mode_stabilize;
-            break;
+    case STABILIZE:
+        ret = &mode_stabilize;
+        break;
 
-        case ALT_HOLD:
-            ret = &mode_althold;
-            break;
+    case ALT_HOLD:
+        ret = &mode_althold;
+        break;
 
-        case AUTO:
-            ret = &mode_auto;
-            break;
+    case AUTO:
+        ret = &mode_auto;
+        break;
 
-        case CIRCLE:
-            ret = &mode_circle;
-            break;
+    case CIRCLE:
+        ret = &mode_circle;
+        break;
 
-        case LOITER:
-            ret = &mode_loiter;
-            break;
+    case LOITER:
+        ret = &mode_loiter;
+        break;
 
-        case GUIDED:
-            ret = &mode_guided;
-            break;
+    case GUIDED:
+        ret = &mode_guided;
+        break;
 
-        case LAND:
-            ret = &mode_land;
-            break;
+    case LAND:
+        ret = &mode_land;
+        break;
 
-        case RTL:
-            ret = &mode_rtl;
-            break;
+    case RTL:
+        ret = &mode_rtl;
+        break;
 
-        case DRIFT:
-            ret = &mode_drift;
-            break;
+    case DRIFT:
+        ret = &mode_drift;
+        break;
 
-        case SPORT:
-            ret = &mode_sport;
-            break;
+    case SPORT:
+        ret = &mode_sport;
+        break;
 
-        case FLIP:
-            ret = &mode_flip;
-            break;
+    case FLIP:
+        ret = &mode_flip;
+        break;
 
 #if AUTOTUNE_ENABLED == ENABLED
-        case AUTOTUNE:
-            ret = &mode_autotune;
-            break;
+    case AUTOTUNE:
+        ret = &mode_autotune;
+        break;
 #endif
 
-        case POSHOLD:
-            ret = &mode_poshold;
-            break;
+    case POSHOLD:
+        ret = &mode_poshold;
+        break;
 
-        case BRAKE:
-            ret = &mode_brake;
-            break;
+    case BRAKE:
+        ret = &mode_brake;
+        break;
 
-        case THROW:
-            ret = &mode_throw;
-            break;
+    case THROW:
+        ret = &mode_throw;
+        break;
 
-        case AVOID_ADSB:
-            ret = &mode_avoid_adsb;
-            break;
+    case AVOID_ADSB:
+        ret = &mode_avoid_adsb;
+        break;
 
-        case GUIDED_NOGPS:
-            ret = &mode_guided_nogps;
-            break;
+    case GUIDED_NOGPS:
+        ret = &mode_guided_nogps;
+        break;
 
-        case SMART_RTL:
-            ret = &mode_smartrtl;
+    case SMART_RTL:
+        ret = &mode_smartrtl;
 
-        case ZIGZAG:
-            ret = &mode_zigzag;
-            break;
+    case ZIGZAG:
+        ret = &mode_zigzag;
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
     return ret;
@@ -125,7 +125,7 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
 #if FRAME_CONFIG == HELI_FRAME
     // do not allow helis to enter a non-manual throttle mode if the
     // rotor runup is not complete
-    if (!ignore_checks && !new_flightmode->has_manual_throttle() && !motors->rotor_runup_complete()){
+    if (!ignore_checks && !new_flightmode->has_manual_throttle() && !motors->rotor_runup_complete()) {
         gcs().send_text(MAV_SEVERITY_WARNING,"Flight mode change failed");
         Log_Write_Error(ERROR_SUBSYSTEM_FLIGHT_MODE,mode);
         return false;
@@ -224,10 +224,11 @@ void Copter::exit_mode(Copter::Mode *&old_flightmode,
     // if we are changing from a mode that did not use manual throttle,
     // stab col ramp value should be pre-loaded to the correct value to avoid a twitch
     // heli_stab_col_ramp should really only be active switching between Stabilize and Acro modes
-    if (!old_flightmode->has_manual_throttle()){
-        if (new_flightmode == &mode_stabilize){
+    if (!old_flightmode->has_manual_throttle()) {
+        if (new_flightmode == &mode_stabilize) {
             input_manager.set_stab_col_ramp(1.0);
-        } else if (new_flightmode == &mode_acro){
+        }
+        else if (new_flightmode == &mode_acro) {
             input_manager.set_stab_col_ramp(0.0);
         }
     }
@@ -235,7 +236,8 @@ void Copter::exit_mode(Copter::Mode *&old_flightmode,
 }
 
 // notify_flight_mode - sets notify object based on current flight mode.  Only used for OreoLED notify device
-void Copter::notify_flight_mode() {
+void Copter::notify_flight_mode()
+{
     AP_Notify::flags.autopilot_mode = flightmode->is_autopilot();
     notify.set_flight_mode_str(flightmode->name4());
 }
